@@ -1,14 +1,14 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion'
 
 const DIMENSIONS = [
-  { label: 'Ø 71.40mm', value: 71.40, unit: 'mm', prefix: 'Ø ', decimals: 2, position: 'top' },
-  { label: 'm 248g',    value: 248,   unit: 'g',  prefix: 'm ', decimals: 0, position: 'right' },
-  { label: 'Δ 0.02',   value: 0.02,  unit: '',   prefix: 'Δ ', decimals: 2, position: 'bottom' },
-  { label: 'ƒ 40kHz',  value: 40,    unit: 'kHz',prefix: 'ƒ ', decimals: 0, position: 'left' },
+  { label: 'Ø 280mm',  value: 280,   unit: 'mm',  prefix: 'Ø ', decimals: 0, position: 'top' },
+  { label: 'm 248g',   value: 248,   unit: 'g',   prefix: 'm ', decimals: 0, position: 'right' },
+  { label: 'Δ 0.02',  value: 0.02,  unit: '',    prefix: 'Δ ', decimals: 2, position: 'bottom' },
+  { label: 'ƒ 40kHz', value: 40,    unit: 'kHz', prefix: 'ƒ ', decimals: 0, position: 'left' },
 ]
 
 function easeSettle(t: number): number {
@@ -60,6 +60,7 @@ function DimensionCallout({ dim, active }: { dim: typeof DIMENSIONS[0]; active: 
         fontSize: '11px',
         color: 'var(--color-accent-primary)',
         letterSpacing: 'var(--tracking-mono)',
+        zIndex: 11,
         ...positionStyle,
       }}
     >
@@ -73,16 +74,34 @@ export default function HeroSection() {
   const [dimsActive, setDimsActive]       = useState(false)
   const [ctaActive, setCtaActive]         = useState(false)
   const [arrowHovered, setArrowHovered]   = useState(false)
+  const [isMobile, setIsMobile]           = useState(false)
+  const [videoError, setVideoError]       = useState(false)
 
   const breatheProgress = useMotionValue(0)
+  const plinthProgress  = useMotionValue(0)
   const productY        = useTransform(breatheProgress, [0, 0.5, 1], [0, -4, 0])
   const caliperLeftRot  = useTransform(breatheProgress, [0, 0.5, 1], [0, -4, 0])
   const caliperRightRot = useTransform(breatheProgress, [0, 0.5, 1], [0, 4, 0])
-  const plinthOpacity   = useTransform(breatheProgress, [0, 0.5, 1], [0.6, 1.0, 0.6])
+  const plinthOpacity   = useTransform(plinthProgress, [0, 0.5, 1], [0.5, 0.9, 0.5])
 
   useEffect(() => {
-    const controls = animate(breatheProgress, [0, 1], {
+    const mq = window.matchMedia('(max-width: 767px)')
+    setIsMobile(mq.matches)
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+
+  useEffect(() => {
+    const breatheControls = animate(breatheProgress, [0, 1], {
       duration: 8,
+      ease: 'easeInOut',
+      repeat: Infinity,
+      repeatType: 'loop',
+    })
+
+    const plinthControls = animate(plinthProgress, [0, 1], {
+      duration: 8 * 0.92,
       ease: 'easeInOut',
       repeat: Infinity,
       repeatType: 'loop',
@@ -93,10 +112,13 @@ export default function HeroSection() {
     const t3 = setTimeout(() => setCtaActive(true),     1500)
 
     return () => {
-      controls.stop()
+      breatheControls.stop()
+      plinthControls.stop()
       clearTimeout(t1); clearTimeout(t2); clearTimeout(t3)
     }
-  }, [breatheProgress])
+  }, [breatheProgress, plinthProgress])
+
+  const videoSize = isMobile ? '280px' : '480px'
 
   const headline = 'Instruments, not gadgets.'
   const chars = headline.split('')
@@ -145,19 +167,35 @@ export default function HeroSection() {
       <div
         style={{
           position: 'absolute',
-          top: '18%',
+          top: '30%',
           right: 'calc(var(--margin-desktop) + 40px)',
         }}
       >
+        {/* Plinth glow — rendered before video so it paints beneath it */}
+        <motion.div
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            bottom: '-60px',
+            left: 'calc(50% - 160px)',
+            width: '320px',
+            height: '120px',
+            background: 'var(--grad-plinth)',
+            filter: 'blur(40px)',
+            opacity: plinthOpacity,
+            pointerEvents: 'none',
+          }}
+        />
+
         <motion.div style={{ y: productY }}>
-          {/* Left caliper bracket */}
+          {/* Left caliper bracket — 24px outside video edge */}
           <motion.div
             initial={{ x: -200, opacity: 0 }}
             animate={caliperActive ? { x: 0, opacity: 1 } : {}}
             transition={{ duration: 0.6, ease: [0.2, 0.8, 0.2, 1] }}
             style={{
               position: 'absolute',
-              left: '-56px',
+              left: '-48px',
               top: '-20px',
               bottom: '-20px',
               width: '24px',
@@ -165,17 +203,18 @@ export default function HeroSection() {
               borderTop: '1px solid var(--color-accent-primary)',
               borderBottom: '1px solid var(--color-accent-primary)',
               rotate: caliperLeftRot,
+              zIndex: 11,
             }}
           />
 
-          {/* Right caliper bracket */}
+          {/* Right caliper bracket — 24px outside video edge */}
           <motion.div
             initial={{ x: 200, opacity: 0 }}
             animate={caliperActive ? { x: 0, opacity: 1 } : {}}
             transition={{ duration: 0.6, ease: [0.2, 0.8, 0.2, 1] }}
             style={{
               position: 'absolute',
-              right: '-56px',
+              right: '-48px',
               top: '-20px',
               bottom: '-20px',
               width: '24px',
@@ -183,6 +222,7 @@ export default function HeroSection() {
               borderTop: '1px solid var(--color-accent-primary)',
               borderBottom: '1px solid var(--color-accent-primary)',
               rotate: caliperRightRot,
+              zIndex: 11,
             }}
           />
 
@@ -191,32 +231,36 @@ export default function HeroSection() {
               <DimensionCallout key={dim.position} dim={dim} active={dimsActive} />
             ))}
 
-            <div style={{ position: 'relative', width: '280px', height: '280px' }}>
-              <Image
-                src="/images/hero-product.png"
-                alt="Auraltech Studio Reference Headphones"
-                fill
-                priority
-                style={{ objectFit: 'contain' }}
-              />
+            <div style={{ position: 'relative', width: videoSize, height: videoSize, zIndex: 10 }}>
+              {!videoError ? (
+                <video
+                  src="/videos/headphones-animation.mp4"
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  preload="none"
+                  poster="/images/hero-product.png"
+                  onError={() => setVideoError(true)}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain',
+                    mixBlendMode: 'screen',
+                  }}
+                />
+              ) : (
+                <Image
+                  src="/images/hero-product.png"
+                  alt="Auraltech Studio Reference Headphones"
+                  fill
+                  priority
+                  style={{ objectFit: 'contain' }}
+                />
+              )}
             </div>
           </div>
         </motion.div>
-
-        {/* Plinth glow */}
-        <motion.div
-          aria-hidden="true"
-          style={{
-            position: 'absolute',
-            bottom: '-40px',
-            left: '-60px',
-            right: '-60px',
-            height: '80px',
-            background: 'var(--grad-plinth)',
-            opacity: plinthOpacity,
-            pointerEvents: 'none',
-          }}
-        />
       </div>
 
       {/* Headline — kept left-aligned, maxWidth capped so it stays clear of the right image */}
@@ -226,6 +270,7 @@ export default function HeroSection() {
           left: 'var(--margin-desktop)',
           bottom: '20%',
           maxWidth: '600px',
+          zIndex: 20,
         }}
       >
         <h1

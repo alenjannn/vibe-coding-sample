@@ -6,7 +6,8 @@
       "Bash(Get-ChildItem -Recurse \"D:\\\\thirdSY\\\\Internship\\\\QE360\\\\Claude Skills\\\\app\", \"D:\\\\thirdSY\\\\Internship\\\\QE360\\\\Claude Skills\\\\components\" -Include \"*.tsx\", \"*.css\")",
       "Bash(Select-Object -ExpandProperty FullName)",
       "Bash(npx tsc *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "PowerShell(New-Item *)"
     ]
   }
 }
